@@ -40,14 +40,18 @@ kubectl -n django-app run postgres-restore \
 from there run `ls -lh /backup`
 inside the temp container run this and replace backup file name:
 
-```
-export PGPASSWORD='your-password'
+`export PGPASSWORD='your-password'`
 
+#### restore without dropping the DB
+
+```
 pg_restore \
   --host=postgres \
   --port=5432 \
   --username=change_me \
   --dbname=exchange \
+  --clean \
+  --if-exists \
   --no-owner \
   --no-privileges \
   /backup/<backup_name>.dump
