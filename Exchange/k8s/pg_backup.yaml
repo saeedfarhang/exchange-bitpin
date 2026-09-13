@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backups
+  labels:
+    app: postgres
+    component: backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  labels:
+    app: postgres
+    component: backup
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600
+
+      template:
+        metadata:
+          labels:
+            app: postgres
+            component: backup
+
+        spec:
+          restartPolicy: OnFailure
+
+          containers:
+            - name: pg-backup
+              image: postgres:17
+
+              env:
+                - name: PGHOST
+                  value: postgres
+
+                - name: PGPORT
+                  value: "5432"
+
+                - name: PGDATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_DB
+
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_USER
+
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
+
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+
+                  TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+                  BACKUP_FILE="/backup/postgres_${TIMESTAMP}.dump"
+
+                  echo "Starting PostgreSQL backup..."
+                  echo "Database: ${PGDATABASE}"
+                  echo "Backup: ${BACKUP_FILE}"
+
+                  pg_dump \
+                    --format=custom \
+                    --no-owner \
+                    --no-privileges \
+                    --file="${BACKUP_FILE}"
+
+                  echo "Backup completed successfully."
+
+                  # Keep only the latest 14 backups
+                  ls -1t /backup/postgres_*.dump 2>/dev/null \
+                    | tail -n +15 \
+                    | xargs -r rm -f
+
+                  echo "Current backups:"
+                  ls -lh /backup/postgres_*.dump
+
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: postgres-backups

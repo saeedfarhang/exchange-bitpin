@@ -9,3 +9,4 @@ resources:
   - django.yaml
   - config.yaml
   - secrets.yaml
+  - pg_backup.yaml
