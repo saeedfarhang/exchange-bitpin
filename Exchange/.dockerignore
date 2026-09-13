@@ -17,3 +17,4 @@ Dockerfile
 docker-compose*.yml
 README.md
 *.md
+docker/postgres-data/
