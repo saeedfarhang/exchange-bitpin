@@ -1,0 +1,150 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: django-migrate
+  labels:
+    app: django
+    component: migrate
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 300
+
+  template:
+    metadata:
+      labels:
+        app: django
+        component: migrate
+    spec:
+      restartPolicy: OnFailure
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+
+      containers:
+        - name: migrate
+          image: exchange:local
+          imagePullPolicy: Never
+          command:
+            - python
+            - manage.py
+            - migrate
+            - --noinput
+
+          envFrom:
+            - configMapRef:
+                name: django-config
+            - secretRef:
+                name: django-secret
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django
+  labels:
+    app: django
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: django
+
+  template:
+    metadata:
+      labels:
+        app: django
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+
+      containers:
+        - name: django
+          image: exchange:local
+          imagePullPolicy: Never
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: django-config
+            - secretRef:
+                name: django-secret
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django
+  labels:
+    app: django
+spec:
+  type: ClusterIP
+
+  selector:
+    app: django
+
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP

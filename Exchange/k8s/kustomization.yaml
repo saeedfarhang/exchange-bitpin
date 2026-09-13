@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: django-app
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - django.yaml
+  - config.yaml
+  - secrets.yaml
