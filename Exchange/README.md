@@ -1,5 +1,17 @@
 # Exchange Dashboard - DevOps Interview
 
+- [Exchange Dashboard - DevOps Interview](#exchange-dashboard---devops-interview)
+  - [Build And Deploy](#build-and-deploy)
+  - [Migration](#migration)
+  - [Port Forwarding](#port-forwarding)
+  - [Data Protection](#data-protection)
+    - [Backup](#backup)
+    - [Restore](#restore)
+      - [restore without dropping the DB](#restore-without-dropping-the-db)
+  - [Trouble Shooting](#trouble-shooting)
+  - [Rollback](#rollback)
+  - [todos](#todos)
+
 ## Build And Deploy
 
 there is a `docker` directory in root of the django project (where manage.py exists) that holds one Dockerfile for building this app. we can use it like:
@@ -95,7 +107,7 @@ pg_restore \
   /backup/<backup_name>.dump
 ```
 
-## Trouble Shooting:
+## Trouble Shooting
 
 find Trouble Shooting docs [here](./TROUBLESHOOTING.md)
 
@@ -109,8 +121,8 @@ then we can apply safely and replace the changed resources with running same com
 
 ---
 
-#### todos:
+## todos
 
-- define health probe for django app
-- TLS
+- define health probe (liveness and ready ness) for django app
+- TLS (cluster issuer and cert manager config)
 - CI/CD with Trivy Scan
