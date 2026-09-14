@@ -2,6 +2,7 @@
 
 - [Exchange Dashboard - DevOps Interview](#exchange-dashboard---devops-interview)
   - [Build And Deploy](#build-and-deploy)
+  - [CI/CD](#cicd)
   - [Migration](#migration)
   - [Port Forwarding](#port-forwarding)
   - [Data Protection](#data-protection)
@@ -10,6 +11,7 @@
       - [restore without dropping the DB](#restore-without-dropping-the-db)
   - [Trouble Shooting](#trouble-shooting)
   - [Rollback](#rollback)
+  - [Workflows](#workflows)
   - [todos](#todos)
 
 ## Build And Deploy
@@ -34,6 +36,19 @@ wait ~3-4 mins. apps should come up and you can move further. check with
 `kubectl -n django-app get pods`
 
 you should see running state for all pods after a small wait time (so the images can get pulled and start jobs get finished and finally the app containers get into healthy state).
+
+## CI/CD
+
+GitHub Actions builds the image from `docker/Dockerfile`, scans it with Trivy, and pushes to GitHub Container Registry (`ghcr.io/<owner>/<repo>`).
+
+- Workflow: [`.github/workflows/build-scan-push.yml`](../.github/workflows/build-scan-push.yml)
+- Pull requests: build + Trivy only (no push)
+- Push to `master`/`main` or a `v*` tag: build, scan, then push (`<sha>` and `latest` on the default branch)
+- Trivy fails the job on unfixed `CRITICAL`/`HIGH` findings; SARIF is uploaded to GitHub Code Scanning
+
+To use another registry (Docker Hub, Harbor, …) set repository variables `REGISTRY` and `IMAGE_NAME`, and replace the login step secrets (`DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` for Docker Hub).
+
+After a successful push, point `k8s/django.yaml` at the published image and set `imagePullPolicy: IfNotPresent` (or `Always`) instead of `Never`.
 
 ## Migration
 
@@ -119,10 +134,12 @@ for rollback this app related manifests, we should first delete the migrate job.
 then we can apply safely and replace the changed resources with running same command we use for deploy:
 `kubectl apply -k k8s/`
 
----
+## Workflows
+
+workflows can be find in parent repo (where git initiated). there you find a job for build, scan with Trivy and push image to an example registry. the image tag generated base on it's commit SHA.
 
 ## todos
 
-- define health probe (liveness and ready ness) for django app
-- TLS (cluster issuer and cert manager config)
-- CI/CD with Trivy Scan
+- [ ] define health probe (liveness and ready ness) for django app
+- [ ] TLS (cluster issuer and cert manager config)
+- [x] CI/CD (on github actions) with Trivy Scan
