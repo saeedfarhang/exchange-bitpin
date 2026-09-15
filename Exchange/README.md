@@ -140,6 +140,6 @@ workflows can be find in parent repo (where git initiated). there you find a job
 
 ## todos
 
-- [ ] define health probe (liveness and ready ness) for django app
+- [ ] define health probe (readinessProbe, livenessProbe, startupProbe) for django app
 - [ ] TLS (cluster issuer and cert manager config)
 - [x] CI/CD (on github actions) with Trivy Scan
